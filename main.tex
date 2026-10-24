@@ -1,0 +1,146 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- Базовые пакеты ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{authblk}
+\usepackage{microtype}
+
+% --- Настройка гиперссылок ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue,
+}
+
+% --- Титульная информация ---
+\title{\textbf{Bénard Cells in Brains, Markets, and Senates:\\ Constrained Network Reconstruction Reveals a Universal Signature of Collective Organization}}
+
+\author[1]{Petr Avtonomov}
+\affil[1]{Independent Researcher \\ ORCID: 0009-0003-2816-6782 \\ \texttt{avtonomovpetr@gmail.com}}
+
+\date{October 24, 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Complex systems across biology, finance, and society are often described as ``complex,'' yet their collective behavior frequently collapses into simple, low-dimensional structures. We test the hypothesis that this collapse is not domain-specific but reflects a universal organizing principle: under a constraint of non-negativity, collective dynamics crystallize into local, energy-minimizing clusters --- a network analogue of Bénard cells in Rayleigh--Bénard convection.
+
+We apply a single reconstruction operator --- non-negative least squares (NNLS) combined with a spatially weighted L1 penalty (Weighted L1-NNLS) --- to three independent datasets: (i) resting-state fMRI BOLD signals parcellated into 100 cortical regions (Schaefer-100), (ii) daily returns of 80 S\&P 500 equities grouped into 8 economic sectors, and (iii) roll-call votes of the 117th United States Senate, with ideology scored by DW-NOMINATE.
+
+In all three domains, unconstrained least squares (LS) produces 46--49\% negative --- i.e., physically or socially implausible --- connections. NNLS eliminates these entirely (0\% negative). When a distance-weighted L1 penalty is added, the reconstructed networks become markedly more local: in fMRI, mean connection length decreases by 29\% (82~mm $\rightarrow$ 58~mm) and the fraction of intra-network connections rises from 14.9\% to 23.6\%; in equities, the fraction of intra-sector connections rises from 11.6\% to 82.8\%; in the Senate, the network collapses into two ideologically coherent blocks with near-zero cross-party coupling.
+
+We interpret these results as evidence that, when viewed through a common constrained operator, collective behavior of neurons, market participants, and legislators exhibits a homologous topological signature: local, non-negative, energy-minimizing clustering. We argue that non-negativity is not merely a descriptive boundary but a mathematical analogue of herding --- the dominance of positive local coupling --- and that it acts as the ``Rayleigh number'' that triggers the transition from disordered (LS) to crystallized (NNLS + L1) regimes. We discuss the limits of this framework, in particular the inability to distinguish spontaneous self-organization from endogenously constructed (manipulative) synchronization, and propose diagnostics for future work.
+\end{abstract}
+
+\section{Introduction}
+
+Ilya Prigogine's theory of dissipative structures established that open, non-equilibrium systems can spontaneously self-organize into ordered patterns when driven sufficiently far from equilibrium, and that these patterns minimize entropy production \cite{prigogine1977}. The canonical example is Rayleigh--Bénard convection, in which a fluid heated from below organizes into hexagonal ``Bénard cells'' once the temperature gradient exceeds a critical threshold.
+
+Neural, financial, and political systems are all open, non-equilibrium systems with measurable ``energy'' costs: metabolic expenditure in the brain, transaction costs and risk in markets, and political capital in legislatures. If Prigogine's principle is truly universal, then each of these systems should, under sufficient drive, exhibit an analogous transition from disordered coupling to local, energy-minimizing structure.
+
+This work extends our previous analysis of ill-posed inverse problems in macroeconomics \cite{avtonomov2026}, where we showed that linear regularization (Tikhonov/Ridge) stabilizes the inversion of an operator but cannot anticipate a shift in the operator itself --- a regime change. There we treated economic forecasting as an ill-posed inverse problem and demonstrated that regularization acts as a ``spatio-temporal damper,'' but fails when the rules of the game change. Here we shift from temporal forecasting to structural reconstruction: instead of predicting a scalar (GDP), we reconstruct a hidden coupling matrix $W$ from multivariate activity. The question is whether the same constrained operator, applied unchanged across domains, reveals a common topological signature.
+
+Testing this hypothesis requires (a) a common mathematical operator applicable across domains, and (b) a principled way to distinguish ``structure'' from ``noise.'' We propose that constrained network reconstruction provides both. Specifically, we model each system as a linear dynamical process
+\begin{equation}
+    \mathbf{x}(t) \approx W \cdot \mathbf{x}(t-1), \quad W \ge 0,
+\end{equation}
+where $\mathbf{x}(t)$ is a vector of activities (neural, financial, or legislative) and $W$ is the hidden coupling matrix. The constraint $W \ge 0$ encodes the dominance of positive, cooperative interactions --- which we argue is the network-level analogue of herding. A spatially weighted L1 penalty on $W$ further biases the solution toward local (short-range) connections, implementing an explicit ``energy cost'' for long-range coupling.
+
+We apply this operator unchanged to three datasets from three domains, and ask: do the resulting networks exhibit the same topological signature?
+
+\section{Methods}
+
+\subsection{Non-negative least squares (NNLS)}
+Given a lagged activity matrix $\mathbf{X} \in \mathbb{R}^{(T-1) \times N}$ and a current activity matrix $\mathbf{Y} \in \mathbb{R}^{(T-1) \times N}$, we solve, for each target node $i$:
+\begin{equation}
+    \mathbf{w}_i = \arg\min_{\mathbf{w}} \|\mathbf{X}\mathbf{w} - \mathbf{y}_i\|^2 \quad \text{subject to} \quad \mathbf{w} \ge 0, \quad w_i = 0,
+\end{equation}
+where the constraint $w_i = 0$ removes self-coupling. The solution is obtained via \texttt{scipy.optimize.nnls}. This yields $W_{\text{NNLS}}$, the base non-negative network.
+
+\subsection{Unconstrained least squares (LS), for contrast}
+We solve the same problem without the non-negativity constraint, using \texttt{numpy.linalg.lstsq}. This yields $W_{\text{LS}}$, which we use as a baseline to quantify the number of ``implausible'' (negative) connections produced by standard linear methods.
+
+\subsection{Weighted L1-NNLS}
+To encode a cost for long-range coupling, we introduce a distance matrix $D \in \mathbb{R}^{N \times N}$, normalized to $[0, 1]$, where $D_{ij}$ is the ``distance'' between nodes $i$ and $j$ in the relevant metric (Euclidean mm for fMRI; sector distance for equities; ideological distance for the Senate). We then solve:
+\begin{equation}
+    \mathbf{w}_i = \arg\min_{\mathbf{w}} \|\mathbf{X}_{\text{norm}}\mathbf{w} - \mathbf{y}_{i,\text{norm}}\|^2 + \lambda \sum_j D_{ij} w_j \quad \text{subject to} \quad \mathbf{w} \ge 0,
+\end{equation}
+where $\mathbf{X}_{\text{norm}}$ and $\mathbf{y}_{\text{norm}}$ are globally normalized to stabilize the penalty, and $\lambda > 0$ controls the strength of the locality bias. Solutions are obtained via \texttt{scipy.optimize.minimize} with L-BFGS-B and analytic gradients. This yields $W_{\text{L1}}$.
+
+\subsection{Distance definitions}
+\begin{itemize}
+    \item \textbf{fMRI:} Euclidean distance between parcel centroids (Schaefer-100), normalized by maximum distance.
+    \item \textbf{Equities:} $D_{ij} = 0$ if stocks $i$ and $j$ belong to the same economic sector, 1 otherwise.
+    \item \textbf{Senate:} $D_{ij} = |\text{ideology}_i - \text{ideology}_j|$, where ideology is DW-NOMINATE dimension 1, normalized by maximum distance.
+\end{itemize}
+
+\subsection{Data}
+\begin{itemize}
+    \item \textbf{fMRI:} \texttt{nilearn.datasets.fetch\_development\_fmri(n\_subjects=1)}. $T=168$ volumes, $N\approx 100$ parcels (98 after masking).
+    \item \textbf{Equities:} 80 S\&P 500 tickers from 8 sectors, daily adjusted close, 2023-01-01 to 2024-01-01.
+    \item \textbf{Senate:} Voteview roll-call votes, 117th Congress. $N = 104$ senators, $T = 949$ roll calls.
+\end{itemize}
+
+\section{Results}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Domain} & \textbf{LS negative (\%)} & \textbf{NNLS negative (\%)} & \textbf{Intra-cluster (NNLS $\rightarrow$ L1)} \\
+\midrule
+fMRI & 48.9 & 0.0 & 14.9\% $\rightarrow$ 23.6\% \\
+Equities & 46.1 & 0.0 & 11.6\% $\rightarrow$ 82.8\% \\
+Senate & 49.1 & 0.0 & --- (qualitative) \\
+\bottomrule
+\end{tabular}
+\caption{Cross-domain summary.}
+\label{tab:summary}
+\end{table}
+
+In all three domains, the pattern is the same: (i) LS produces $\sim$50\% negative connections; (ii) NNLS eliminates them; (iii) the L1 penalty drives the network toward local clustering (Table \ref{tab:summary}).
+
+\section{Discussion}
+
+\subsection{A homologous topological signature}
+Under a single constrained reconstruction operator, the collective dynamics of neurons, market participants, and legislators exhibit a \textbf{homologous topological signature}: the collapse of high-dimensional coupling into local, non-negative, energy-minimizing clusters. The individual units differ in nature --- biological, financial, legislative --- but the collective organization is structurally the same.
+
+This is the network analogue of Bénard cells. The operator plays the role of the temperature gradient; the L1 penalty plays the role of the energy cost; and the resulting $W_{\text{L1}}$ is the crystallized pattern. The pattern is not imposed by the domain; it emerges from the constraint. When the same operator is applied unchanged across three domains, the same signature appears.
+
+\subsection{Non-negativity as herding}
+The constraint $W \ge 0$ is not a mere technical convenience. We interpret it as a mathematical encoding of \textit{herding}: the empirical dominance of positive, cooperative coupling. Neurons excite their neighbors; traders follow their sector; legislators vote with their party. Negative (inhibitory, contrarian, cross-party) interactions exist, but they are second-order. Non-negativity is not a boundary of description --- it is the trigger of self-organization.
+
+\subsection{Limitations}
+\textbf{Endogenous noise.} Our method does not distinguish spontaneous self-organization (Prigogine) from constructed synchronization (manipulation). Both produce dense local clusters. \\
+\textbf{No attribution.} $W_{\text{L1}}$ identifies \textit{where} coupling is anomalously strong, asymmetric, or short-lived. It does not identify \textit{who} produced it. \\
+\textbf{Model assumptions.} The linear model is a first-order approximation. Real systems have memory, nonlinearities, and time-varying coupling.
+
+\subsection{Future work: detecting constructed Bénard cells}
+We propose that spontaneous and constructed clustering, though statistically similar at the level of $W$, may be distinguishable through secondary signatures: (1) Asymmetry; (2) Temporal instability; (3) Out-of-sample prediction; (4) Lead--lag / transfer entropy; (5) Divergence from fundamentals. These diagnostics form the basis of a follow-up project (Line 2c).
+
+\section{Conclusion}
+A single constrained reconstruction operator --- NNLS with a distance-weighted L1 penalty --- produces structurally homologous networks in three domains: fMRI, equity markets, and legislative voting. We interpret this as evidence that the transition from individual complexity to collective simplicity is governed by a common principle: the dominance of positive local coupling, formalized as non-negativity plus an energy cost for long-range interaction.
+
+\section*{Data and code availability}
+All code will be released at \url{https://github.com/[YOUR-USERNAME]/[YOUR-REPO]} under an MIT license. Datasets are publicly available: \texttt{nilearn} (fMRI), Yahoo Finance (equities), Voteview (Senate).
+
+\begin{thebibliography}{9}
+\bibitem{prigogine1977} I. Prigogine, \textit{Self-Organization in Nonequilibrium Systems}, Wiley (1977).
+\bibitem{schaefer2018} A. Schaefer et al., Local-global parcellation of the human cerebral cortex, \textit{Cerebral Cortex} 28(9), 3095--3114 (2018).
+\bibitem{voteview2023} J. B. Lewis et al., Voteview: Congressional Roll-Call Votes Database, voteview.com (2023).
+\bibitem{scikit} F. Pedregosa et al., Scikit-learn: Machine Learning in Python, \textit{JMLR} 12, 2825--2830 (2011).
+\bibitem{scipy} P. Virtanen et al., SciPy 1.0: Fundamental Algorithms for Scientific Computing in Python, \textit{Nature Methods} 17, 261--272 (2020).
+\bibitem{avtonomov2026} P. Avtonomov, Ill-Posed Inverse Problems in Finance and Macroeconomics: The Limits of Linear Regularization, Preprint, Zenodo (2026).
+\end{thebibliography}
+
+\end{document}
